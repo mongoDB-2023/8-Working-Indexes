@@ -2,6 +2,11 @@
 1. [What Are Indexes & Why Do We Use Them?](#schema1)
 2. [Adding a Single Field Index](#schema2)
 3. [Understanding Index Restrictions](#schema3)
+4. [Creating Compound Indexes](#schema4)
+5. [Configuring Indexes](#schema5)
+6. [Undestanding Partial Filters](#schema6)
+7. [Understanding the Time-To-Live (TTL) Index](#schema7)
+
 
 
 
@@ -269,32 +274,141 @@ restricciones y el overhead asociado. Se recomienda revisar y ajustar la estrate
 específicas de tus consultas y operaciones en MongoDB.
 
 
+<hr>
+
+<a name="schema4"></a>
+
+## 4. Creating Compound Indexes
+
+
+Un índice compuesto (compound index en inglés) en MongoDB es un tipo de índice que involucra más de un campo. 
+En lugar de indexar un solo campo, un índice compuesto se crea en base a múltiples campos en un mismo documento. 
+Esto permite optimizar consultas que buscan sobre esos campos específicos y mejora el rendimiento de esas consultas.
+
+```
+contactData> db.contacts.createIndex({'dob.age':1, gender:1})
+dob.age_1_gender_1
+
+```
+
+
+<hr>
+
+<a name="schema5"></a>
+
+## 5. Configuring Indexes
+
+```
+contactData> db.contacts.createIndex({email:1}, {unique:true})
+MongoServerError: Index build failed: fdc2a941-7d03-4bac-8963-b8c7e569f73c: 
+Collection contactData.contacts ( 620245de-bfaf-444d-8818-fcba31245d64 ) :: 
+caused by :: E11000 duplicate key error collection: contactData.contacts index: email_1 dup 
+key: { email: "abigail.clark@example.com" }
+```
+
+El error  indica que estamos tratando de crear un índice único en el campo "email", pero hay documentos existentes 
+en la colección que ya tienen valores duplicados en el campo "email". En MongoDB, un índice único impone la restricción
+de que no puede haber duplicados en el campo sobre el cual se ha creado el índice.
 
 
 
+<hr>
+
+<a name="schema6"></a>
+
+## 6. Undestanding Partial Filters
+
+```
+contactData> db.users.insertMany([{name:'Max',email:'max@test.com'},{name:'Manuel'}])
+{
+  acknowledged: true,
+  insertedIds: {
+    '0': ObjectId('6568a7991b83e02dc56087a3'),
+    '1': ObjectId('6568a7991b83e02dc56087a4')
+  }
+}
+```
+Creamos index, único.
+```
+contactData> db.users.createIndex({email:1},{unique:true})
+email_1
+```
+Intentamos añadir un dato nuevo sin email y da error porque ya hay un email: null
+```
+contactData> db.users.insertOne({name:'Anna'})
+MongoServerError: E11000 duplicate key error collection: contactData.users index: email_1 dup key: { email: null }
+contactData> 
+
+```
+Usando `partialFilterExpression`
+```
+contactData> db.users.dropIndex({email:1})
+{ nIndexesWas: 2, ok: 1 }
+contactData> db.users.createIndex({email:1},{unique:true, partialFilterExpression:{email:{$exists:true}}})
+email_1
+contactData> db.users.insertOne({name:'Anna'})
+{
+  acknowledged: true,
+  insertedId: ObjectId('6568a9ca1b83e02dc56087a6')
+
+```
+
+<hr>
+
+<a name="schema7"></a>
+
+## 7. Understanding the Time-To-Live (TTL) Index
 
 
+En MongoDB, el "Time-To-Live" (TTL) es una característica que permite especificar un tiempo de vida para los documentos 
+en una colección. Esta característica se utiliza en combinación con índices TTL para eliminar automáticamente 
+documentos después de un cierto período de tiempo.
 
+Creación de un Índice TTL:
+Puedes crear un índice TTL al definir el campo expireAfterSeconds en segundos al crear el índice. Por ejemplo, 
+si deseas que los documentos expiren después de 24 horas, puedes crear un índice TTL de la siguiente manera:
 
+```
+db.miColeccion.createIndex({ "campoFecha": 1 }, { expireAfterSeconds: 86400 });
 
+```
 
+La funcionalidad de TTL (Time-To-Live) con índices en MongoDB puede ser útil en varias situaciones:
 
+**Cache Expirable:**
 
+Puedes utilizar índices TTL para implementar una especie de caché expirable en MongoDB. 
+Al almacenar datos temporales que deben ser válidos solo por un período específico, puedes asegurarte de que los 
+datos caduquen automáticamente después de un tiempo predefinido.
 
+**Registros Temporales:**
 
+Si estás trabajando con registros temporales, como sesiones de usuario, tokens de autenticación o eventos programados, 
+los índices TTL pueden ayudarte a eliminar automáticamente estos registros una vez que han cumplido su propósito.
 
+**Logs y Auditoría:**
 
+En situaciones en las que necesitas mantener registros de auditoría o logs durante un período específico para el 
+cumplimiento de regulaciones o para análisis temporales, los índices TTL pueden ayudarte a limpiar automáticamente 
+los registros antiguos.
 
+**Eliminación Automática de Datos Obsoletos:**
 
+Si tienes datos que se vuelven obsoletos después de un cierto tiempo y no quieres preocuparte por limpiarlos 
+manualmente, puedes utilizar índices TTL para que MongoDB se encargue de eliminarlos automáticamente.
 
+**Gestión de Sesiones y Cookies:**
 
+En aplicaciones web, puedes utilizar índices TTL para gestionar automáticamente la expiración de sesiones de usuario 
+o cookies que contienen información temporal.
 
+**Temporizadores y Tareas Programadas:**
 
-
-
-
-
-
+Si implementas temporizadores o tareas programadas en tu aplicación y necesitas almacenar información temporal 
+asociada con esas tareas, los índices TTL pueden facilitar la limpieza automática de datos relacionados.
+En resumen, la función TTL con índices en MongoDB es útil cuando necesitas gestionar automáticamente la expiración d
+e datos temporales sin tener que realizar limpiezas manuales periódicas. Esto puede mejorar la eficiencia y simplificar 
+la gestión de datos temporales en tu aplicación.
 
 
 
