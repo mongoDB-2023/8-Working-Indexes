@@ -6,7 +6,8 @@
 5. [Configuring Indexes](#schema5)
 6. [Undestanding Partial Filters](#schema6)
 7. [Understanding the Time-To-Live (TTL) Index](#schema7)
-
+8. [Query Diagnosis & Query Planning](#schema8)
+9. [How MongoDB Rejects a Plan](#schema9)
 
 
 
@@ -409,6 +410,42 @@ asociada con esas tareas, los índices TTL pueden facilitar la limpieza automát
 En resumen, la función TTL con índices en MongoDB es útil cuando necesitas gestionar automáticamente la expiración d
 e datos temporales sin tener que realizar limpiezas manuales periódicas. Esto puede mejorar la eficiencia y simplificar 
 la gestión de datos temporales en tu aplicación.
+
+
+<hr>
+
+<a name="schema8"></a>
+
+## 8. Query Diagnosis & Query Planning
+
+![index](./img/3index.png)
+![index](./img/4index.png)
+
+### Understanding Covered Queries
+
+Para que una consulta sea cubierta, deben cumplirse las siguientes condiciones:
+
+Todos los campos proyectados en la consulta están presentes en el índice.
+La consulta no contiene operadores que requieran la carga de documentos reales (por ejemplo, $elemMatch en arreglos).
+
+
+```
+db.miColeccion.find({ campo1: valor1 }, { _id: 0, campo1: 1, campo2: 1 })
+
+db.miColeccion.createIndex({ campo1: 1, campo2: 1 })
+```
+
+En este caso, la consulta es cubierta porque todos los campos proyectados (campo1 y campo2) están presentes 
+en el índice ({ campo1: 1, campo2: 1 }), y MongoDB puede satisfacer la consulta utilizando únicamente el índice.
+
+
+
+<hr>
+
+<a name="schema9"></a>
+
+## 9. How MongoDB Rejects a Plan
+
 
 
 
